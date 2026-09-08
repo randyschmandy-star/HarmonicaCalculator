@@ -1,0 +1,1031 @@
+<meta charset="utf-8">
+<title>Harmonica Calculator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Work+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+<style>
+  :root{
+    --bg:#F3EBDD;
+    --surface:#FDF9F1;
+    --surface-2:#EDE2CE;
+    --ink:#26201A;
+    --ink-soft:#7A6B58;
+    --ink-faint:#A99C87;
+    --brass:#B57F1F;
+    --brass-ink:#3D2B08;
+    --indigo:#2B3A55;
+    --indigo-ink:#EDF1F8;
+    --line:#D8C9AC;
+    --white-key:#FDF9F1;
+    --white-key-ink:#26201A;
+    --black-key:#2A241C;
+    --black-key-ink:#F3EBDD;
+    --shadow:0 1px 0 rgba(38,32,26,0.06);
+  }
+  /* Light is the default appearance regardless of OS preference; dark only
+     activates when explicitly chosen via the theme toggle. */
+  :root[data-theme="dark"]{
+    --bg:#161209;
+    --surface:#211B12;
+    --surface-2:#2C2418;
+    --ink:#F3EAD9;
+    --ink-soft:#B2A28C;
+    --ink-faint:#786C58;
+    --brass:#E0A94A;
+    --brass-ink:#1E1408;
+    --indigo:#5D76AC;
+    --indigo-ink:#0E1420;
+    --line:#3A3122;
+    --white-key:#2C2418;
+    --white-key-ink:#F3EAD9;
+    --black-key:#0F0C08;
+    --black-key-ink:#E0A94A;
+    --shadow:0 1px 0 rgba(0,0,0,0.4);
+  }
+
+  *{box-sizing:border-box;}
+  [hidden]{display:none !important;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Work Sans', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    max-width:1180px;
+    margin:0 auto;
+    padding:10px 16px 12px;
+  }
+
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:8px;
+  }
+  h1{
+    font-family:'Big Shoulders Display', system-ui, sans-serif;
+    font-weight:800;
+    font-size:clamp(20px, 3vw, 28px);
+    letter-spacing:0.01em;
+    margin:0;
+    color:var(--ink);
+    text-wrap:balance;
+    line-height:1.1;
+  }
+  h1 span{color:var(--brass);}
+  .title-row{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    flex-wrap:wrap;
+  }
+  .tagline{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    max-width:34ch;
+    line-height:1.3;
+    margin:2px 0 0;
+  }
+
+  .clean-toggle{
+    font-family:'Space Mono', monospace;
+    font-weight:700;
+    font-size:9px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    padding:3px 10px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:var(--surface);
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:border-color .12s ease, color .12s ease, background .12s ease;
+  }
+  .clean-toggle:hover{border-color:var(--brass); color:var(--ink);}
+  .clean-toggle:focus-visible{outline:2px solid var(--indigo); outline-offset:2px;}
+  body.clean .clean-toggle{
+    background:var(--brass);
+    color:var(--brass-ink);
+    border-color:var(--brass);
+  }
+
+  /* ---- Clean mode: hide explanatory copy, keep controls and the answer ---- */
+  body.clean .tagline,
+  body.clean .section-label,
+  body.clean .piano-hint,
+  body.clean .pos-use,
+  body.clean .result-caption,
+  body.clean .result-sub,
+  body.clean .circle-legend,
+  body.clean footer{
+    display:none;
+  }
+  body.clean .panel-head{justify-content:flex-start;}
+
+  .theme-toggle{
+    flex:0 0 auto;
+    width:30px;
+    height:30px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:border-color .12s ease, transform .12s ease;
+  }
+  .theme-toggle:hover{border-color:var(--brass); transform:translateY(-1px);}
+  .theme-toggle:focus-visible{outline:2px solid var(--indigo); outline-offset:2px;}
+  .theme-toggle svg{width:15px; height:15px; display:block;}
+  .theme-toggle .icon-moon{display:none;}
+  :root[data-theme="dark"] .theme-toggle .icon-sun{display:none;}
+  :root[data-theme="dark"] .theme-toggle .icon-moon{display:block;}
+
+  main{
+    display:grid;
+    grid-template-columns:1.35fr 1fr;
+    gap:12px;
+    align-items:start;
+  }
+  /* Every standard iPhone's landscape width (SE and up: 667px+) must keep the
+     two-column layout — phones only fall back to one column in portrait. */
+  @media (max-width:560px){
+    main{grid-template-columns:1fr;}
+  }
+
+  section{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:8px 11px 10px;
+  }
+
+  .section-label{
+    font-family:'Space Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin:0 0 6px;
+  }
+
+  .panel-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .panel-head .section-label{margin:0 0 6px;}
+
+  .toggle-row{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:10px;
+  }
+
+  .quality-toggle{
+    display:inline-flex;
+    flex-wrap:nowrap;
+    max-width:100%;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:2px;
+    gap:2px;
+    margin-bottom:0;
+  }
+  .quality-toggle button{
+    border:none;
+    background:none;
+    padding:4px 10px;
+    border-radius:999px;
+    font-family:'Space Mono', monospace;
+    font-size:9.5px;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    cursor:pointer;
+    white-space:nowrap;
+    transition:background .12s ease, color .12s ease;
+  }
+  .quality-toggle button:hover{color:var(--ink);}
+  .quality-toggle button.active{
+    background:var(--brass);
+    color:var(--brass-ink);
+  }
+  .quality-toggle button:focus-visible{outline:2px solid var(--indigo); outline-offset:2px;}
+
+  .view-tabs{
+    display:inline-flex;
+    gap:12px;
+    margin-bottom:6px;
+  }
+  .view-tabs button{
+    border:none;
+    background:none;
+    padding:0 0 3px;
+    font-family:'Space Mono', monospace;
+    font-size:9.5px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    transition:color .12s ease, border-color .12s ease;
+  }
+  .view-tabs button:hover{color:var(--ink);}
+  .view-tabs button.active{
+    color:var(--brass);
+    border-bottom-color:var(--brass);
+  }
+  .view-tabs button:focus-visible{outline:2px solid var(--indigo); outline-offset:2px;}
+
+  /* ---- Piano-style key selector ---- */
+  .piano{
+    position:relative;
+    width:100%;
+    height:clamp(54px, 9.5vw, 82px);
+    margin-top:6px;
+    user-select:none;
+  }
+  .whites{
+    display:flex;
+    height:100%;
+    gap:3px;
+  }
+  .key{
+    border:1px solid var(--line);
+    border-radius:5px;
+    cursor:pointer;
+    font-family:'Space Mono', monospace;
+    font-weight:700;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding-bottom:5px;
+    transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .key:hover{transform:translateY(-1px);}
+  .key.white{
+    flex:1;
+    background:var(--white-key);
+    color:var(--white-key-ink);
+    font-size:12px;
+    box-shadow:var(--shadow);
+  }
+  .blacks{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+  }
+  .key.black{
+    position:absolute;
+    top:0;
+    width:9.4%;
+    height:58%;
+    background:var(--black-key);
+    color:var(--black-key-ink);
+    font-size:10px;
+    pointer-events:auto;
+    box-shadow:0 3px 6px rgba(0,0,0,0.25);
+    border-color:transparent;
+  }
+  .key.selected{
+    background:var(--brass) !important;
+    color:var(--brass-ink) !important;
+    box-shadow:0 0 0 2px var(--brass), 0 4px 10px rgba(181,127,31,0.35);
+    transform:translateY(1px);
+  }
+  .key:focus-visible{outline:2px solid var(--indigo); outline-offset:2px;}
+
+  .piano-hint{
+    margin:6px 2px 0;
+    font-size:10.5px;
+    color:var(--ink-faint);
+  }
+
+  /* ---- Circle of fifths key selector ---- */
+  .circle-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    padding:0;
+  }
+  #circleSvg{
+    width:min(100%, 150px);
+    height:auto;
+    display:block;
+    user-select:none;
+  }
+  .wedge{
+    cursor:pointer;
+    outline:none;
+    transition:filter .12s ease;
+  }
+  .wedge:hover{filter:brightness(1.1);}
+  /* Plain CSS outline draws a rectangle around an SVG shape's bounding box,
+     not its actual outline — use stroke instead so the focus ring follows
+     the wedge shape itself. */
+  .wedge:focus-visible{stroke:var(--indigo); stroke-width:3;}
+  .wedge-label{
+    pointer-events:none;
+    font-family:'Work Sans', sans-serif;
+    font-weight:700;
+    font-size:22px;
+    fill:rgba(20,15,8,0.88);
+  }
+  .wedge-label-minor{
+    font-size:13px;
+    font-weight:600;
+  }
+  .circle-center-label{
+    font-family:'Space Mono', monospace;
+    font-size:9px;
+    letter-spacing:0.1em;
+    fill:var(--ink-faint);
+  }
+  .highlight-ring{
+    fill:none;
+    stroke-width:4;
+    stroke-linejoin:round;
+    pointer-events:none;
+  }
+  .highlight-harp{stroke:var(--indigo);}
+  .highlight-song{stroke:var(--brass);}
+  .circle-legend{
+    display:flex;
+    gap:14px;
+    font-family:'Space Mono', monospace;
+    font-size:9px;
+    letter-spacing:0.03em;
+    color:var(--ink-soft);
+  }
+  .legend-item{display:inline-flex; align-items:center;}
+  .legend-dot{
+    display:inline-block;
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    margin-right:4px;
+  }
+  .legend-dot-song{background:var(--brass);}
+  .legend-dot-harp{background:var(--indigo);}
+
+  /* ---- Position selector ---- */
+  .positions{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(86px, 1fr));
+    gap:4px;
+  }
+  .pos-btn{
+    text-align:left;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:4px 7px;
+    cursor:pointer;
+    color:var(--ink);
+    font-family:'Work Sans', sans-serif;
+    transition:border-color .12s ease, background .12s ease;
+  }
+  .pos-btn:hover{border-color:var(--brass);}
+  .pos-btn.active{
+    background:var(--indigo);
+    border-color:var(--indigo);
+    color:var(--indigo-ink);
+  }
+  .pos-name{
+    font-weight:700;
+    font-size:11.5px;
+    margin:0;
+  }
+  .pos-name b{
+    font-family:'Space Mono', monospace;
+    font-weight:700;
+    opacity:0.6;
+    margin-right:2px;
+  }
+  .pos-use{
+    font-size:10px;
+    line-height:1.3;
+    opacity:0.8;
+  }
+  .pos-use b{
+    font-family:'Space Mono', monospace;
+    font-weight:600;
+    opacity:0.75;
+  }
+
+  /* ---- Result ---- */
+  .result{
+    margin-top:6px;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:11px;
+    padding:6px 12px 8px;
+  }
+  .result-row{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .result-caption{
+    font-family:'Space Mono', monospace;
+    font-size:9.5px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  .result-start{
+    font-family:'Space Mono', monospace;
+    font-size:9.5px;
+    letter-spacing:0.03em;
+    color:var(--brass-ink);
+    background:var(--brass);
+    padding:2px 8px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .result-value{
+    font-family:'Big Shoulders Display', system-ui, sans-serif;
+    font-weight:800;
+    font-size:clamp(26px, 4.5vw, 38px);
+    line-height:1;
+    color:var(--brass);
+    letter-spacing:0.01em;
+  }
+  .result-sub{
+    font-size:10.5px;
+    color:var(--ink-soft);
+    margin-top:3px;
+    line-height:1.35;
+  }
+  .result-sub b{color:var(--ink);}
+
+  /* ---- Reference table toggle ---- */
+  .table-toggle{
+    margin-top:6px;
+    background:none;
+    border:1px solid var(--line);
+    border-radius:9px;
+    padding:4px 10px;
+    font-family:'Space Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.03em;
+    color:var(--ink-soft);
+    cursor:pointer;
+    width:100%;
+    text-align:left;
+  }
+  .table-toggle:hover{color:var(--ink); border-color:var(--brass);}
+  .ref-table{
+    margin-top:8px;
+    overflow-x:auto;
+  }
+  table{
+    border-collapse:collapse;
+    width:100%;
+    font-size:12.5px;
+    font-family:'Space Mono', monospace;
+  }
+  th, td{
+    padding:6px 8px;
+    text-align:center;
+    border-bottom:1px solid var(--line);
+    white-space:nowrap;
+  }
+  th{
+    color:var(--ink-faint);
+    font-weight:700;
+    text-transform:uppercase;
+    font-size:10px;
+    letter-spacing:0.06em;
+  }
+  td:first-child, th:first-child{
+    text-align:left;
+    color:var(--ink);
+    font-weight:700;
+  }
+  tr.current-row td{background:rgba(181,127,31,0.13);}
+
+  .table-cell{
+    display:block;
+    width:100%;
+    border:none;
+    background:none;
+    padding:2px 4px;
+    margin:-2px -4px;
+    border-radius:5px;
+    font:inherit;
+    color:inherit;
+    cursor:pointer;
+    transition:background .12s ease, color .12s ease;
+  }
+  .table-cell:hover{background:var(--surface-2); color:var(--brass);}
+  .table-cell:focus-visible{outline:2px solid var(--indigo); outline-offset:1px;}
+  .table-cell.is-selected{
+    color:var(--brass-ink);
+    background:var(--brass);
+    font-weight:700;
+  }
+
+  footer{
+    margin-top:8px;
+    font-size:9.5px;
+    color:var(--ink-faint);
+    text-align:center;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+
+<div class="app">
+  <header>
+    <div>
+      <div class="title-row">
+        <h1>Harmonica <span>Calculator</span></h1>
+        <button type="button" class="clean-toggle" id="cleanToggle" aria-pressed="false">Clean</button>
+      </div>
+      <p class="tagline">Pick the song's key, choose a position — the app finds your harmonica.</p>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle color theme" title="Toggle color theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+    </button>
+  </header>
+
+  <main>
+    <section aria-label="Key selector">
+      <p class="section-label">1 · Pick the song's key</p>
+      <div class="toggle-row">
+        <div class="quality-toggle" id="keyViewTabs" role="group" aria-label="Key selector view">
+          <button type="button" data-keyview="piano">Piano</button>
+          <button type="button" data-keyview="circle">Circle of Fifths</button>
+        </div>
+        <div class="quality-toggle" id="qualityToggle" role="group" aria-label="Major or minor">
+          <button type="button" data-quality="major">Major</button>
+          <button type="button" data-quality="minor">Minor</button>
+        </div>
+      </div>
+      <div class="piano" id="piano">
+        <div class="whites" id="whites"></div>
+        <div class="blacks" id="blacks"></div>
+      </div>
+      <div class="circle-wrap" id="circleWrap" hidden>
+        <svg id="circleSvg" viewBox="0 0 320 320" role="img" aria-label="Circle of fifths key selector"></svg>
+        <div class="circle-legend">
+          <span class="legend-item"><span class="legend-dot legend-dot-song"></span>Song key</span>
+          <span class="legend-item"><span class="legend-dot legend-dot-harp"></span>Harmonica key</span>
+        </div>
+      </div>
+      <p class="piano-hint" id="pianoHint"></p>
+    </section>
+
+    <div>
+      <section aria-label="Position selector">
+        <div class="panel-head">
+          <p class="section-label">2 · Choose position</p>
+          <div class="view-tabs" id="viewTabs" role="group" aria-label="Position detail level">
+            <button type="button" data-tab="simplified">Simplified</button>
+            <button type="button" data-tab="advanced">Advanced</button>
+          </div>
+        </div>
+        <div class="positions" id="positions"></div>
+
+        <div class="result" id="result">
+          <div class="result-row">
+            <span class="result-caption">Play a harmonica in</span>
+            <span class="result-start" id="resultStart"></span>
+          </div>
+          <div class="result-value" id="resultValue">—</div>
+          <p class="result-sub" id="resultSub"></p>
+        </div>
+
+        <button class="table-toggle" id="tableToggle" aria-expanded="false">▸ Show full position table</button>
+        <div class="ref-table" id="refTable" hidden></div>
+      </section>
+    </div>
+  </main>
+
+  <footer>12 chromatic keys × 5 positions, based on the standard Richter-tuned diatonic harmonica.</footer>
+</div>
+
+<script>
+(function(){
+  var NOTE_NAMES = ["C","Db","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
+  // Minor keys are conventionally spelled differently from their major
+  // counterparts at a couple of pitches (e.g. "C# minor", not "Db minor") —
+  // confirmed against multiple published position charts.
+  var MINOR_NOTE_OVERRIDES = { 1: "C#" };
+  function noteName(semi, isMinor){
+    if (isMinor && MINOR_NOTE_OVERRIDES.hasOwnProperty(semi)) return MINOR_NOTE_OVERRIDES[semi];
+    return NOTE_NAMES[semi];
+  }
+  var WHITE = [
+    {name:"C", semi:0}, {name:"D", semi:2}, {name:"E", semi:4},
+    {name:"F", semi:5}, {name:"G", semi:7}, {name:"A", semi:9}, {name:"B", semi:11}
+  ];
+  var BLACK = [
+    {name:"Db", semi:1,  left:9.79},
+    {name:"Eb", semi:3,  left:24.07},
+    {name:"F#", semi:6,  left:52.64},
+    {name:"Ab", semi:8,  left:66.93},
+    {name:"Bb", semi:10, left:81.21}
+  ];
+
+  // Circle of fifths, clockwise from 12 o'clock. The major label on this chart
+  // uses "Gb" rather than "F#" at the enharmonic pivot point, matching the
+  // reference chart — same pitch, just this view's own spelling convention.
+  var COF = [
+    {semi:0,  label:"C"}, {semi:7,  label:"G"}, {semi:2,  label:"D"}, {semi:9,  label:"A"},
+    {semi:4,  label:"E"}, {semi:11, label:"B"}, {semi:6,  label:"Gb"}, {semi:1,  label:"Db"},
+    {semi:8,  label:"Ab"}, {semi:3,  label:"Eb"}, {semi:10, label:"Bb"}, {semi:5,  label:"F"}
+  ];
+  var majorSemiToWedge = {};
+  var minorSemiToWedge = {};
+  COF.forEach(function(w, i){
+    majorSemiToWedge[w.semi] = i;
+    minorSemiToWedge[(w.semi + 9) % 12] = i;
+  });
+
+  var POSITIONS = [
+    {n:1, name:"Straight Harp", mode:"Major / Ionian", use:"Folk, country", minor:false, rare:false, startsOn:"4 blow"},
+    {n:2, name:"Cross Harp",    mode:"Mixolydian",     use:"Blues, rock, pop", minor:false, rare:false, startsOn:"2 draw"},
+    {n:3, name:"Dorian",        mode:"Dorian",         use:"Minor blues", minor:true, rare:false, startsOn:"4 draw"},
+    {n:4, name:"Minor",         mode:"Aeolian",        use:"Minor melodies", minor:true, rare:true, startsOn:"6 draw"},
+    {n:5, name:"Phrygian",      mode:"Phrygian",       use:"Exotic minor", minor:true, rare:true, startsOn:"2 blow"}
+  ];
+
+  // harp semitone = f(songSemitone) per position, derived from the reference chart
+  // (positions follow the circle of fifths: each position sits a perfect 5th above the last)
+  function harpSemitone(song, posN){
+    switch(posN){
+      case 1: return song;
+      case 2: return (song + 5) % 12;
+      case 3: return (song - 2 + 12) % 12;
+      case 4: return (song - 9 + 24) % 12;
+      case 5: return (song - 4 + 12) % 12;
+    }
+  }
+
+  var state = { song: 7, pos: 2, quality: "major", tab: "simplified", keyView: "piano" }; // default: G major, 2nd position -> C harp (the classic example)
+  var DEFAULT_POS = { major: 2, minor: 3 };
+
+  var whitesEl = document.getElementById("whites");
+  var blacksEl = document.getElementById("blacks");
+  var positionsEl = document.getElementById("positions");
+  var resultValueEl = document.getElementById("resultValue");
+  var resultSubEl = document.getElementById("resultSub");
+  var resultStartEl = document.getElementById("resultStart");
+  var pianoHintEl = document.getElementById("pianoHint");
+  var qualityToggleEl = document.getElementById("qualityToggle");
+  var viewTabsEl = document.getElementById("viewTabs");
+  var refTableEl = document.getElementById("refTable");
+  var pianoEl = document.getElementById("piano");
+  var circleWrapEl = document.getElementById("circleWrap");
+  var circleSvgEl = document.getElementById("circleSvg");
+  var keyViewTabsEl = document.getElementById("keyViewTabs");
+
+  // ---- circle of fifths geometry ----
+  var CX = 160, CY = 160, R_OUTER = 150, R_MID = 104, R_INNER = 58;
+  var svgNS = "http://www.w3.org/2000/svg";
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(svgNS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function polarPoint(r, angleDeg){
+    var rad = (angleDeg - 90) * Math.PI / 180;
+    return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
+  }
+  function wedgePath(rOuter, rInner, startAngle, endAngle){
+    var oStart = polarPoint(rOuter, startAngle), oEnd = polarPoint(rOuter, endAngle);
+    var iEnd = polarPoint(rInner, endAngle), iStart = polarPoint(rInner, startAngle);
+    var largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
+    return "M " + oStart.x.toFixed(2) + " " + oStart.y.toFixed(2) +
+      " A " + rOuter + " " + rOuter + " 0 " + largeArc + " 1 " + oEnd.x.toFixed(2) + " " + oEnd.y.toFixed(2) +
+      " L " + iEnd.x.toFixed(2) + " " + iEnd.y.toFixed(2) +
+      " A " + rInner + " " + rInner + " 0 " + largeArc + " 0 " + iStart.x.toFixed(2) + " " + iStart.y.toFixed(2) +
+      " Z";
+  }
+
+  var songHighlightEl, harpHighlightEl;
+
+  function buildCircle(){
+    var wedgesGroup = svgEl("g", {});
+    var labelsGroup = svgEl("g", {});
+    circleSvgEl.appendChild(wedgesGroup);
+
+    COF.forEach(function(w, i){
+      var start = i * 30, end = start + 30, mid = start + 15;
+      var hue = i * 30;
+      var outerFill = "hsl(" + hue + ", 62%, 62%)";
+      var innerFill = "hsl(" + hue + ", 46%, 79%)";
+      var innerSemi = (w.semi + 9) % 12;
+
+      var outerPath = svgEl("path", {
+        d: wedgePath(R_OUTER, R_MID, start, end), fill: outerFill,
+        class: "wedge", tabindex: "0", role: "button",
+        "aria-label": w.label + " major",
+        "data-semi": w.semi, "data-quality": "major"
+      });
+      var innerPath = svgEl("path", {
+        d: wedgePath(R_MID, R_INNER, start, end), fill: innerFill,
+        class: "wedge", tabindex: "0", role: "button",
+        "aria-label": noteName(innerSemi, true) + " minor",
+        "data-semi": innerSemi, "data-quality": "minor"
+      });
+      wedgesGroup.appendChild(outerPath);
+      wedgesGroup.appendChild(innerPath);
+
+      var outerLabelPos = polarPoint((R_OUTER + R_MID) / 2, mid);
+      var innerLabelPos = polarPoint((R_MID + R_INNER) / 2, mid);
+      var outerLabel = svgEl("text", {
+        x: outerLabelPos.x.toFixed(2), y: outerLabelPos.y.toFixed(2),
+        class: "wedge-label", "text-anchor": "middle", "dominant-baseline": "middle"
+      });
+      outerLabel.textContent = w.label;
+      var innerLabel = svgEl("text", {
+        x: innerLabelPos.x.toFixed(2), y: innerLabelPos.y.toFixed(2),
+        class: "wedge-label wedge-label-minor", "text-anchor": "middle", "dominant-baseline": "middle"
+      });
+      innerLabel.textContent = noteName(innerSemi, true) + "m";
+      labelsGroup.appendChild(outerLabel);
+      labelsGroup.appendChild(innerLabel);
+    });
+
+    harpHighlightEl = svgEl("path", { class: "highlight-ring highlight-harp", d: "" });
+    songHighlightEl = svgEl("path", { class: "highlight-ring highlight-song", d: "" });
+    circleSvgEl.appendChild(harpHighlightEl);
+    circleSvgEl.appendChild(songHighlightEl);
+    circleSvgEl.appendChild(labelsGroup);
+
+    var centerLabel1 = svgEl("text", { x: CX, y: CY - 6, class: "circle-center-label", "text-anchor": "middle" });
+    centerLabel1.textContent = "CIRCLE OF";
+    var centerLabel2 = svgEl("text", { x: CX, y: CY + 8, class: "circle-center-label", "text-anchor": "middle" });
+    centerLabel2.textContent = "FIFTHS";
+    circleSvgEl.appendChild(centerLabel1);
+    circleSvgEl.appendChild(centerLabel2);
+
+    circleSvgEl.addEventListener("click", function(e){
+      var el = e.target.closest(".wedge");
+      if (!el) return;
+      selectFromCircle(parseInt(el.getAttribute("data-semi"), 10), el.getAttribute("data-quality"));
+    });
+    circleSvgEl.addEventListener("keydown", function(e){
+      if (e.key !== "Enter" && e.key !== " ") return;
+      var el = e.target.closest(".wedge");
+      if (!el) return;
+      e.preventDefault();
+      selectFromCircle(parseInt(el.getAttribute("data-semi"), 10), el.getAttribute("data-quality"));
+    });
+  }
+
+  function renderCircleHighlights(){
+    var songWedge = state.quality === "major" ? majorSemiToWedge[state.song] : minorSemiToWedge[state.song];
+    var songStart = songWedge * 30, songEnd = songStart + 30;
+    var songD = state.quality === "major"
+      ? wedgePath(R_OUTER, R_MID, songStart, songEnd)
+      : wedgePath(R_MID, R_INNER, songStart, songEnd);
+
+    var harpSemi = harpSemitone(state.song, state.pos);
+    var harpWedge = majorSemiToWedge[harpSemi];
+    var harpStart = harpWedge * 30, harpEnd = harpStart + 30;
+    var harpD = wedgePath(R_OUTER, R_MID, harpStart, harpEnd);
+
+    songHighlightEl.setAttribute("d", songD);
+    harpHighlightEl.setAttribute("d", harpD);
+  }
+
+  function visiblePositions(){
+    // Advanced shows every position, major and minor alike; Simplified sticks
+    // to the current major/minor choice and hides the rare ones.
+    if (state.tab === "advanced") return POSITIONS.slice();
+    return POSITIONS.filter(function(p){
+      return p.minor === (state.quality === "minor") && !p.rare;
+    });
+  }
+
+  function buildPiano(){
+    WHITE.forEach(function(k){
+      var b = document.createElement("button");
+      b.className = "key white";
+      b.textContent = k.name;
+      b.setAttribute("data-semi", k.semi);
+      b.setAttribute("aria-label", "Key " + k.name);
+      b.addEventListener("click", function(){ selectSong(k.semi); });
+      whitesEl.appendChild(b);
+    });
+    BLACK.forEach(function(k){
+      var b = document.createElement("button");
+      b.className = "key black";
+      b.textContent = k.name;
+      b.style.left = k.left + "%";
+      b.setAttribute("data-semi", k.semi);
+      b.setAttribute("aria-label", "Key " + k.name);
+      b.addEventListener("click", function(){ selectSong(k.semi); });
+      blacksEl.appendChild(b);
+    });
+  }
+
+  function buildPositions(){
+    positionsEl.innerHTML = "";
+    var list = visiblePositions();
+    list.forEach(function(p){
+      var b = document.createElement("button");
+      b.className = "pos-btn";
+      b.setAttribute("data-pos", p.n);
+      b.innerHTML =
+        '<div class="pos-name"><b>' + p.n + '·</b>' + p.name + '</div>' +
+        '<div class="pos-use">' + p.use + '</div>';
+      b.addEventListener("click", function(){ selectPos(p.n); });
+      positionsEl.appendChild(b);
+    });
+  }
+
+  function selectSong(semi){
+    state.song = semi;
+    render();
+  }
+  function selectPos(n){
+    state.pos = n;
+    state.quality = POSITIONS[n - 1].minor ? "minor" : "major";
+    render();
+  }
+  function selectQuality(quality){
+    if (quality === state.quality) return;
+    state.quality = quality;
+    state.pos = DEFAULT_POS[quality];
+    buildPositions();
+    render();
+  }
+  function selectTab(tab){
+    if (tab === state.tab) return;
+    state.tab = tab;
+    var stillVisible = visiblePositions().some(function(p){ return p.n === state.pos; });
+    if (!stillVisible) state.pos = DEFAULT_POS[state.quality];
+    buildPositions();
+    render();
+  }
+  function selectFromTable(song, posN){
+    var posInfo = POSITIONS[posN - 1];
+    state.song = song;
+    state.quality = posInfo.minor ? "minor" : "major";
+    state.pos = posN;
+    if (posInfo.rare) state.tab = "advanced";
+    buildPositions();
+    render();
+  }
+  function selectFromCircle(semi, quality){
+    state.song = semi;
+    if (quality !== state.quality){
+      state.quality = quality;
+      state.pos = DEFAULT_POS[quality];
+      buildPositions();
+    }
+    render();
+  }
+  function selectKeyView(view){
+    if (view === state.keyView) return;
+    state.keyView = view;
+    pianoEl.hidden = view !== "piano";
+    circleWrapEl.hidden = view !== "circle";
+    render();
+  }
+
+  function render(){
+    // piano highlight
+    document.querySelectorAll(".key").forEach(function(el){
+      el.classList.toggle("selected", parseInt(el.getAttribute("data-semi"), 10) === state.song);
+    });
+    // position highlight
+    document.querySelectorAll(".pos-btn").forEach(function(el){
+      el.classList.toggle("active", parseInt(el.getAttribute("data-pos"), 10) === state.pos);
+    });
+    // major/minor toggle highlight
+    qualityToggleEl.querySelectorAll("button").forEach(function(el){
+      el.classList.toggle("active", el.getAttribute("data-quality") === state.quality);
+    });
+    // simplified/advanced tab highlight
+    viewTabsEl.querySelectorAll("button").forEach(function(el){
+      el.classList.toggle("active", el.getAttribute("data-tab") === state.tab);
+    });
+    // piano/circle view highlight
+    keyViewTabsEl.querySelectorAll("button").forEach(function(el){
+      el.classList.toggle("active", el.getAttribute("data-keyview") === state.keyView);
+    });
+    renderCircleHighlights();
+
+    var posInfo = POSITIONS[state.pos - 1];
+    var songName = noteName(state.song, posInfo.minor) + (posInfo.minor ? "m" : "");
+    var harp = harpSemitone(state.song, state.pos);
+    var harpName = NOTE_NAMES[harp];
+
+    resultValueEl.textContent = harpName;
+    resultSubEl.innerHTML =
+      "For a song in <b>" + songName + "</b>, position " + posInfo.n + " (" + posInfo.name + " / " + posInfo.mode + ").";
+    resultStartEl.textContent = "Starts on " + posInfo.startsOn;
+    pianoHintEl.textContent = "Selected key: " + songName;
+
+    renderTable();
+  }
+
+  function renderTable(){
+    if (refTableEl.hidden) return;
+    var order = [8,9,10,11,0,1,2,3,4,5,6,7]; // Ab..G, matches source chart order
+    var rows = order.map(function(harpSemi){
+      var cells = [1,2,3,4,5].map(function(posN){
+        // find song semitone such that harpSemitone(song,posN) === harpSemi
+        for (var s=0; s<12; s++){
+          if (harpSemitone(s, posN) === harpSemi){
+            var minor = POSITIONS[posN-1].minor;
+            var label = noteName(s, minor) + (minor ? "m" : "");
+            var isSelected = s === state.song && posN === state.pos;
+            return '<td><button type="button" class="table-cell' + (isSelected ? " is-selected" : "") +
+              '" data-song="' + s + '" data-pos="' + posN + '">' + label + '</button></td>';
+          }
+        }
+        return "<td></td>";
+      });
+      return {harp: NOTE_NAMES[harpSemi], cells: cells, isCurrent: harpSemi === harpSemitone(state.song, state.pos)};
+    });
+
+    var html = '<table><thead><tr><th>Harmonica</th><th>1st</th><th>2nd</th><th>3rd</th><th>4th</th><th>5th</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      html += '<tr class="' + (r.isCurrent ? "current-row" : "") + '"><td>' + r.harp + '</td>' + r.cells.join('') + '</tr>';
+    });
+    html += '</tbody></table>';
+    refTableEl.innerHTML = html;
+  }
+
+  qualityToggleEl.querySelectorAll("button").forEach(function(el){
+    el.addEventListener("click", function(){ selectQuality(el.getAttribute("data-quality")); });
+  });
+
+  viewTabsEl.querySelectorAll("button").forEach(function(el){
+    el.addEventListener("click", function(){ selectTab(el.getAttribute("data-tab")); });
+  });
+
+  keyViewTabsEl.querySelectorAll("button").forEach(function(el){
+    el.addEventListener("click", function(){ selectKeyView(el.getAttribute("data-keyview")); });
+  });
+
+  refTableEl.addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-song]");
+    if (!btn) return;
+    selectFromTable(parseInt(btn.getAttribute("data-song"), 10), parseInt(btn.getAttribute("data-pos"), 10));
+  });
+
+  // ---- clean mode: hide explanatory copy for returning users ----
+  document.getElementById("cleanToggle").addEventListener("click", function(){
+    var isClean = document.body.classList.toggle("clean");
+    this.textContent = isClean ? "Standard" : "Clean";
+    this.setAttribute("aria-pressed", String(isClean));
+  });
+
+  document.getElementById("tableToggle").addEventListener("click", function(){
+    var expanded = !refTableEl.hidden;
+    refTableEl.hidden = expanded;
+    this.setAttribute("aria-expanded", String(!expanded));
+    this.textContent = (expanded ? "▸ Show" : "▾ Hide") + " full position table";
+    if (!expanded) renderTable();
+  });
+
+  // ---- theme toggle ----
+  var root = document.documentElement;
+  var themeToggleBtn = document.getElementById("themeToggle");
+
+  function currentTheme(){
+    return root.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  }
+  function applyStoredTheme(){
+    var saved = null;
+    try{ saved = localStorage.getItem("hc-theme"); }catch(e){}
+    root.setAttribute("data-theme", saved === "dark" ? "dark" : "light");
+  }
+  themeToggleBtn.addEventListener("click", function(){
+    var next = currentTheme() === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try{ localStorage.setItem("hc-theme", next); }catch(e){}
+  });
+
+  applyStoredTheme();
+  buildPiano();
+  buildCircle();
+  buildPositions();
+  render();
+})();
+</script>
